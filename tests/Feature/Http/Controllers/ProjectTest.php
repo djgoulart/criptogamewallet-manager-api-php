@@ -45,50 +45,23 @@ class ProjectTest extends TestCase
 
     public function test_invalidation_data()
     {
-        $response = $this->json('POST', route('projects.store'), []);
-        $this->assertInvalidationFieldRequired($response);
+        $data = ['name' => ''];
+        $this->assertInvalidationInStoreAction($data, 'required');
 
-        $response = $this->json('POST', route('projects.store'), [
-            'name' => str_repeat('a', 256)
-        ]);
-        $this->assertInvalidationFieldMax($response);
+        $data = ['name' => str_repeat('a', 256)];
+        $this->assertInvalidationInStoreAction($data, 'max.string', ['max' => 255]);
 
         $project = Project::factory()->create(['name' => 'test1']);
-        $response = $this->json('POST', route('projects.store'), [
-            'name' => 'test1',
-        ]);
-        $this->assertInvalidationFieldUnique($response);
+        $this->assertInvalidationInStoreAction(['name' => 'test1'], 'unique');
 
-        $project = Project::factory()->make(['url' => 'http//invalid_url']);
-        $response = $this->json('POST', route('projects.store'), $project->attributesToArray());
-        $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['url'])
-            ->assertJsonFragment([
-                Lang::get('validation.url', ['attribute' => 'url'])
-            ]);
+        $data = ['url' => 'http:/invalid_url'];
+        $this->assertInvalidationInStoreAction($data, 'url');
 
-        $projectData = [
-            'name' => 'test1',
-            'url' => 'http://test1.com',
-            'network' => 'testnet'
-        ];
-        $response = $this->json('POST', route('projects.store'), $projectData);
-        $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['network'])
-            ->assertJsonFragment([
-                Lang::get('validation.in', ['attribute' => 'network'])
-            ]);
+        $data = ['network' => 'testnet'];
+        $this->assertInvalidationInStoreAction($data, 'in');
 
-        $projectData = [
-            'name' => 'test1',
-            'url' => 'http://test1.com',
-            'network' => 'testnet',
-            'is_active' => 'test'
-        ];
-        $response = $this->json('POST', route('projects.store'), $projectData);
-        $this->assertInvalidationFieldBoolean($response);
+        $data = ['is_active' => 'a'];
+        $this->assertInvalidationInStoreAction($data, 'boolean');
 
         $project = Project::factory()->create();
         $project2 = Project::factory()->create();
@@ -107,7 +80,7 @@ class ProjectTest extends TestCase
         $this->assertInvalidationFieldBoolean($response);
     }
 
-    public function test_project_index()
+    public function test_index()
     {
         $project = Project::factory()->create();
 
@@ -119,7 +92,7 @@ class ProjectTest extends TestCase
             ->assertJson([$project->toArray()]);
     }
 
-    public function test_project_show()
+    public function test_show()
     {
         /** @var Project */
         $project = Project::factory()->create();
@@ -135,7 +108,7 @@ class ProjectTest extends TestCase
             ->assertJson($project->toArray());
     }
 
-    public function test_project_store()
+    public function test_store()
     {
         $project = Project::factory()->make();
         $response = $this->json('POST', route('projects.store'), $project->attributesToArray());
@@ -148,7 +121,7 @@ class ProjectTest extends TestCase
             ->assertJson($createdProj->toArray());
     }
 
-    public function test_project_update()
+    public function test_update()
     {
         $project = Project::factory()->create();
         $response = $this->json(
@@ -173,12 +146,17 @@ class ProjectTest extends TestCase
             ]);
     }
 
-    public function test_project_delete()
+    public function test_delete()
     {
         $project = Project::factory()->create();
         $response = $this->json('DELETE', route('projects.destroy', ['project' => $project->id]));
 
         $this->assertSoftDeleted($project);
         $response->assertOk();
+    }
+
+    protected function routeStore()
+    {
+        return route('projects.store');
     }
 }
