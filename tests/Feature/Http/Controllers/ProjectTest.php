@@ -7,84 +7,40 @@ use Illuminate\Testing\TestResponse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Lang;
 use Tests\TestCase;
+use Tests\Traits\TestValidations;
 
 class ProjectTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, TestValidations;
 
-    public function test_project_index()
-    {
-        $project = Project::factory()->create();
-
-        /** @var TestResponse $response */
-        $response = $this->json('GET', route('projects.index'));
-
-        $response
-            ->assertStatus(200)
-            ->assertJson([$project->toArray()]);
-    }
-
-    public function test_project_show()
-    {
-        /** @var Project */
-        $project = Project::factory()->create();
-
-        /** @var TestResponse $response */
-        $response = $this->json('GET', route(
-            'projects.show',
-            ['project' => $project->id]
-        ));
-
-        $response
-            ->assertStatus(200)
-            ->assertJson($project->toArray());
-    }
 
     protected function assertInvalidationFieldRequired(TestResponse $response)
     {
-        $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'url', 'network'])
-            ->assertJsonMissingValidationErrors(['is_active'])
-            ->assertJsonFragment([
-                Lang::get('validation.required', ['attribute' => 'name']),
-            ])
-            ->assertJsonFragment([
-                Lang::get('validation.required', ['attribute' => 'url']),
-            ])
-            ->assertJsonFragment([
-                Lang::get('validation.required', ['attribute' => 'network']),
-            ]);
+        $this->assertInvalidationFields(
+            $response,
+            ['name', 'url', 'network'],
+            'required'
+        );
     }
 
     protected function assertInvalidationFieldMax(TestResponse $response)
     {
-        $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['name'])
-            ->assertJsonFragment([
-                Lang::get('validation.max.string', ['attribute' => 'name', 'max' => 255]),
-            ]);
+        $this->assertInvalidationFields(
+            $response,
+            ['name'],
+            'max.string',
+            ['max' => 255]
+        );
     }
 
     protected function assertInvalidationFieldUnique(TestResponse $response)
     {
-        $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['name'])
-            ->assertJsonFragment([
-                Lang::get('validation.unique', ['attribute' => 'name']),
-            ]);
+        $this->assertInvalidationFields($response, ['name'], 'unique');
     }
 
     protected function assertInvalidationFieldBoolean(TestResponse $response)
     {
-        $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['is_active'])
-            ->assertJsonFragment([
-                Lang::get('validation.boolean', ['attribute' => 'is active'])
-            ]);
+        $this->assertInvalidationFields($response, ['is_active'], 'boolean');
     }
 
     public function test_invalidation_data()
@@ -149,6 +105,34 @@ class ProjectTest extends TestCase
             ['is_active' => 'false']
         );
         $this->assertInvalidationFieldBoolean($response);
+    }
+
+    public function test_project_index()
+    {
+        $project = Project::factory()->create();
+
+        /** @var TestResponse $response */
+        $response = $this->json('GET', route('projects.index'));
+
+        $response
+            ->assertStatus(200)
+            ->assertJson([$project->toArray()]);
+    }
+
+    public function test_project_show()
+    {
+        /** @var Project */
+        $project = Project::factory()->create();
+
+        /** @var TestResponse $response */
+        $response = $this->json('GET', route(
+            'projects.show',
+            ['project' => $project->id]
+        ));
+
+        $response
+            ->assertStatus(200)
+            ->assertJson($project->toArray());
     }
 
     public function test_project_store()
