@@ -71,10 +71,11 @@ class ProjectsController extends Controller
     {
         $validationRules = [
             'name' => [
+                'required',
                 'max:255',
                 Rule::unique('projects')->ignore($id)
             ],
-            'url' => 'url',
+            'url' => 'required|url',
             'network' => [Rule::in(['bsc', 'eth', 'polygon'])],
             'is_active' => 'boolean'
         ];

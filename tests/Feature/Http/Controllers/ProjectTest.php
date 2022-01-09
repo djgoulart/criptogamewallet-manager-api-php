@@ -5,131 +5,95 @@ namespace Tests\Feature\Http\Controllers;
 use App\Models\Project;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Lang;
 use Tests\TestCase;
+use Tests\Traits\TestSaves;
 use Tests\Traits\TestValidations;
 
 class ProjectTest extends TestCase
 {
-    use RefreshDatabase, TestValidations;
+    use RefreshDatabase, TestValidations, TestSaves;
 
+    private $project;
 
-    protected function assertInvalidationFieldRequired(TestResponse $response)
+    protected function setUp(): void
     {
-        $this->assertInvalidationFields(
-            $response,
-            ['name', 'url', 'network'],
-            'required'
-        );
-    }
-
-    protected function assertInvalidationFieldMax(TestResponse $response)
-    {
-        $this->assertInvalidationFields(
-            $response,
-            ['name'],
-            'max.string',
-            ['max' => 255]
-        );
-    }
-
-    protected function assertInvalidationFieldUnique(TestResponse $response)
-    {
-        $this->assertInvalidationFields($response, ['name'], 'unique');
-    }
-
-    protected function assertInvalidationFieldBoolean(TestResponse $response)
-    {
-        $this->assertInvalidationFields($response, ['is_active'], 'boolean');
+        parent::setUp();
+        $this->project = Project::factory()->create();
     }
 
     public function test_invalidation_data()
     {
         $data = ['name' => ''];
         $this->assertInvalidationInStoreAction($data, 'required');
+        $this->assertInvalidationInUpdateAction($data, 'required');
 
         $data = ['name' => str_repeat('a', 256)];
         $this->assertInvalidationInStoreAction($data, 'max.string', ['max' => 255]);
+        $this->assertInvalidationInUpdateAction($data, 'max.string', ['max' => 255]);
 
-        $project = Project::factory()->create(['name' => 'test1']);
+        Project::factory()->create(['name' => 'test1']);
         $this->assertInvalidationInStoreAction(['name' => 'test1'], 'unique');
+        $this->assertInvalidationInUpdateAction(['name' => 'test1'], 'unique');
 
         $data = ['url' => 'http:/invalid_url'];
         $this->assertInvalidationInStoreAction($data, 'url');
+        $this->assertInvalidationInUpdateAction($data, 'url');
 
         $data = ['network' => 'testnet'];
         $this->assertInvalidationInStoreAction($data, 'in');
+        $this->assertInvalidationInUpdateAction($data, 'in');
 
         $data = ['is_active' => 'a'];
         $this->assertInvalidationInStoreAction($data, 'boolean');
-
-        $project = Project::factory()->create();
-        $project2 = Project::factory()->create();
-        $response = $this->json(
-            'PUT',
-            route('projects.update', ['project' => $project2->id]),
-            ['name' => $project->name]
-        );
-        $this->assertInvalidationFieldUnique($response);
-
-        $response = $this->json(
-            'PUT',
-            route('projects.update', ['project' => $project->id]),
-            ['is_active' => 'false']
-        );
-        $this->assertInvalidationFieldBoolean($response);
+        $this->assertInvalidationInUpdateAction($data, 'boolean');
     }
 
     public function test_index()
     {
-        $project = Project::factory()->create();
-
         /** @var TestResponse $response */
         $response = $this->json('GET', route('projects.index'));
 
         $response
-            ->assertStatus(200)
-            ->assertJson([$project->toArray()]);
+            ->assertOk()
+            ->assertJson([$this->project->toArray()]);
     }
 
     public function test_show()
     {
-        /** @var Project */
-        $project = Project::factory()->create();
-
         /** @var TestResponse $response */
         $response = $this->json('GET', route(
             'projects.show',
-            ['project' => $project->id]
+            ['project' => $this->project->id]
         ));
 
         $response
-            ->assertStatus(200)
-            ->assertJson($project->toArray());
+            ->assertOk()
+            ->assertJson($this->project->toArray());
     }
 
     public function test_store()
     {
-        $project = Project::factory()->make();
-        $response = $this->json('POST', route('projects.store'), $project->attributesToArray());
+        $data = Project::factory()->make()->toArray();
+        $response = $this->assertStore(
+            $data,
+            $data + ['is_active' => true, 'deleted_at' => null]
+        );
+        $response->assertJsonStructure([
+            'created_at', 'updated_at'
+        ]);
 
-        $id = $response->json('id');
-        $createdProj = Project::find($id);
-
-        $response
-            ->assertCreated()
-            ->assertJson($createdProj->toArray());
+        $data = Project::factory()->make(['is_active' => false])->toArray();
+        $this->assertStore(
+            $data,
+            $data + ['is_active' => false]
+        );
     }
 
     public function test_update()
     {
-        $project = Project::factory()->create();
         $response = $this->json(
             'PUT',
-            route(
-                'projects.update',
-                ['project' => $project->id]
-            ),
+            route('projects.update', ['project' => $this->project->id]),
             [
                 'name' => 'updated name',
                 'url' => 'http://updated.url',
@@ -149,7 +113,13 @@ class ProjectTest extends TestCase
     public function test_delete()
     {
         $project = Project::factory()->create();
-        $response = $this->json('DELETE', route('projects.destroy', ['project' => $project->id]));
+        $response = $this->json(
+            'DELETE',
+            route(
+                'projects.destroy',
+                ['project' => $project->id]
+            )
+        );
 
         $this->assertSoftDeleted($project);
         $response->assertOk();
@@ -158,5 +128,15 @@ class ProjectTest extends TestCase
     protected function routeStore()
     {
         return route('projects.store');
+    }
+
+    protected function routeUpdate()
+    {
+        return route('projects.update', ['project' => $this->project->id]);
+    }
+
+    protected function model()
+    {
+        return Project::class;
     }
 }
