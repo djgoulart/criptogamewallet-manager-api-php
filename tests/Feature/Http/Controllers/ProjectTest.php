@@ -74,6 +74,8 @@ class ProjectTest extends TestCase
     public function test_store()
     {
         $data = Project::factory()->make()->toArray();
+
+        /** @var TestResponse $response */
         $response = $this->assertStore(
             $data,
             $data + ['is_active' => true, 'deleted_at' => null]
@@ -91,28 +93,27 @@ class ProjectTest extends TestCase
 
     public function test_update()
     {
-        $response = $this->json(
-            'PUT',
-            route('projects.update', ['project' => $this->project->id]),
-            [
-                'name' => 'updated name',
-                'url' => 'http://updated.url',
-                'network' => 'eth',
-            ]
-        );
+        $data = [
+            'name' => 'updated name',
+            'url' => 'http://updated.url',
+            'network' => 'eth',
+        ];
 
-        $response
-            ->assertOk()
-            ->assertJsonFragment([
-                'name' => 'updated name',
-                'url' => 'http://updated.url',
-                'network' => 'eth',
-            ]);
+        /** @var TestResponse $response */
+        $response = $this->assertUpdate(
+            $data,
+            $data + ['is_active' => true, 'deleted_at' => null]
+        );
+        $response->assertJsonStructure([
+            'created_at', 'updated_at'
+        ]);
     }
 
     public function test_delete()
     {
         $project = Project::factory()->create();
+
+        /** @var TestResponse $response */
         $response = $this->json(
             'DELETE',
             route(
