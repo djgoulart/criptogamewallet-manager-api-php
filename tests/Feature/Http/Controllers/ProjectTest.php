@@ -188,4 +188,13 @@ class ProjectTest extends TestCase
                 'network' => 'eth',
             ]);
     }
+
+    public function test_project_delete()
+    {
+        $project = Project::factory()->create();
+        $response = $this->json('DELETE', route('projects.destroy', ['project' => $project->id]));
+
+        $this->assertSoftDeleted($project);
+        $response->assertOk();
+    }
 }

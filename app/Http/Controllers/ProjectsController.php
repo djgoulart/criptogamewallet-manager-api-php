@@ -95,6 +95,7 @@ class ProjectsController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $project = Project::find($id);
+        return response()->json($project->delete());
     }
 }
