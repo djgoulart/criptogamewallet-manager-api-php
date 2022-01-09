@@ -10,10 +10,16 @@ use App\Traits\Uuid;
 
 class ProjectTest extends TestCase
 {
+    private $project;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->project = new Project();
+    }
 
     public function test_model_fillable_properties()
     {
-        $project = new Project();
         $fillable = [
             'name',
             'url',
@@ -22,10 +28,10 @@ class ProjectTest extends TestCase
         ];
 
         foreach ($fillable as $property) {
-            $this->assertContains($property, $project->getFillable());
+            $this->assertContains($property, $this->project->getFillable());
         }
 
-        $this->assertCount(count($fillable), $project->getFillable());
+        $this->assertCount(count($fillable), $this->project->getFillable());
     }
 
     public function test_model_use_correct_traits()
@@ -49,18 +55,15 @@ class ProjectTest extends TestCase
     {
         $casts = ['id' => 'string', 'deleted_at' => 'datetime', 'is_active' => 'boolean'];
 
-        $project = new Project();
-
         foreach ($casts as $cast) {
-            $this->assertContains($cast, $project->getCasts());
+            $this->assertContains($cast, $this->project->getCasts());
         }
 
-        $this->assertCount(count($casts), $project->getCasts());
+        $this->assertCount(count($casts), $this->project->getCasts());
     }
 
     public function test_model_dates_properties()
     {
-        $project = new Project();
         $dates = [
             'created_at',
             'updated_at',
@@ -68,16 +71,14 @@ class ProjectTest extends TestCase
         ];
 
         foreach ($dates as $date) {
-            $this->assertContains($date, $project->getDates());
+            $this->assertContains($date, $this->project->getDates());
         }
 
-        $this->assertCount(count($dates), $project->getDates());
+        $this->assertCount(count($dates), $this->project->getDates());
     }
 
     public function test_model_not_using_auto_increment_ids()
     {
-        $project = new Project();
-
-        $this->assertFalse($project->incrementing);
+        $this->assertFalse($this->project->incrementing);
     }
 }
