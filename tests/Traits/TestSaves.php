@@ -8,6 +8,10 @@ use Illuminate\Testing\TestResponse;
 
 trait TestSaves
 {
+    protected abstract function routeStore();
+    protected abstract function routeUpdate();
+    protected abstract function model();
+
     protected function assertStore(array $sendData, array $testDbData, array $testJsonData = null): TestResponse
     {
         /** @var TestResponse $response */
